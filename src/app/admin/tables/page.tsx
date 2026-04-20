@@ -2,10 +2,6 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { TablesManager } from "./tables-manager";
 import type { Staff, QrSticker, Table } from "@/types/database";
 
-type StickerWithTable = QrSticker & {
-  tables: Pick<Table, "id" | "number"> | null;
-};
-
 export default async function AdminTablesPage() {
   const supabase = await createServerSupabaseClient();
 
@@ -29,15 +25,20 @@ export default async function AdminTablesPage() {
 
   const { data: stickers } = await supabase
     .from("qr_stickers")
-    .select("*, tables(id, number)")
+    .select("*")
     .eq("restaurant_id", restaurantId)
-    .order("created_at", { ascending: false }) as { data: StickerWithTable[] | null };
+    .eq("status", "assigned") as { data: QrSticker[] | null };
+
+  // Join stickers to tables
+  const tablesWithStickers = (tables || []).map((table) => ({
+    ...table,
+    sticker: (stickers || []).find((s) => s.assigned_table_id === table.id) || null,
+  }));
 
   return (
     <TablesManager
       restaurantId={restaurantId}
-      initialTables={tables || []}
-      initialStickers={stickers || []}
+      initialTables={tablesWithStickers}
     />
   );
 }
