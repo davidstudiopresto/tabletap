@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "Missing token" }, { status: 400 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const qrUrl = `${appUrl}/t/${token}`;
+  const origin = request.nextUrl.origin;
+  const qrUrl = `${origin}/t/${token}`;
 
   try {
     const buffer = await QRCode.toBuffer(qrUrl, {
