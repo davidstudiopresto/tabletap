@@ -25,22 +25,22 @@ export function CategoryDialog({ restaurantId, category, onSave, onClose }: Prop
       const supabase = createClient();
 
       if (category) {
-        const { data, error } = await supabase
-          .from("categories")
+        const { data, error } = await (supabase
+          .from("categories") as any)
           .update({ name: name.trim() })
           .eq("id", category.id)
           .select()
-          .single();
-        if (error) throw error;
+          .single() as { data: Category | null; error: any };
+        if (error || !data) throw error;
         onSave(data);
         toast.success("Catégorie mise à jour");
       } else {
-        const { data, error } = await supabase
-          .from("categories")
+        const { data, error } = await (supabase
+          .from("categories") as any)
           .insert({ restaurant_id: restaurantId, name: name.trim() })
           .select()
-          .single();
-        if (error) throw error;
+          .single() as { data: Category | null; error: any };
+        if (error || !data) throw error;
         onSave(data);
         toast.success("Catégorie créée");
       }

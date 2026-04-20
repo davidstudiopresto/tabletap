@@ -84,22 +84,22 @@ export function MenuItemDialog({
       };
 
       if (item) {
-        const { data, error } = await supabase
-          .from("menu_items")
+        const { data, error } = await (supabase
+          .from("menu_items") as any)
           .update(payload)
           .eq("id", item.id)
           .select()
-          .single();
-        if (error) throw error;
+          .single() as { data: MenuItem | null; error: any };
+        if (error || !data) throw error;
         onSave(data);
         toast.success("Plat mis à jour");
       } else {
-        const { data, error } = await supabase
-          .from("menu_items")
+        const { data, error } = await (supabase
+          .from("menu_items") as any)
           .insert(payload)
           .select()
-          .single();
-        if (error) throw error;
+          .single() as { data: MenuItem | null; error: any };
+        if (error || !data) throw error;
         onSave(data);
         toast.success("Plat créé");
       }

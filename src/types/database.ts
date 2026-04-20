@@ -240,6 +240,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      qr_stickers: {
+        Row: {
+          id: string;
+          public_id: string;
+          restaurant_id: string;
+          status: "unassigned" | "assigned" | "disabled";
+          assigned_table_id: string | null;
+          label: string | null;
+          scan_count: number;
+          last_scanned_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          public_id: string;
+          restaurant_id: string;
+          status?: "unassigned" | "assigned" | "disabled";
+          assigned_table_id?: string | null;
+          label?: string | null;
+          scan_count?: number;
+          last_scanned_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          public_id?: string;
+          restaurant_id?: string;
+          status?: "unassigned" | "assigned" | "disabled";
+          assigned_table_id?: string | null;
+          label?: string | null;
+          scan_count?: number;
+          last_scanned_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -257,3 +293,4 @@ export type MenuItem = Database["public"]["Tables"]["menu_items"]["Row"];
 export type Order = Database["public"]["Tables"]["orders"]["Row"];
 export type OrderItem = Database["public"]["Tables"]["order_items"]["Row"];
 export type Staff = Database["public"]["Tables"]["staff"]["Row"];
+export type QrSticker = Database["public"]["Tables"]["qr_stickers"]["Row"];

@@ -90,7 +90,7 @@ export default function OnboardingPage() {
         .from("staff")
         .select("restaurant_id")
         .eq("user_id", user.id)
-        .single();
+        .single() as { data: { restaurant_id: string } | null };
       if (!staff) throw new Error("No restaurant");
 
       const restaurantId = staff.restaurant_id;
@@ -98,15 +98,15 @@ export default function OnboardingPage() {
       for (let catIdx = 0; catIdx < extractedData.length; catIdx++) {
         const cat = extractedData[catIdx];
 
-        const { data: category } = await supabase
-          .from("categories")
+        const { data: category } = await (supabase
+          .from("categories") as any)
           .insert({
             restaurant_id: restaurantId,
             name: cat.name,
             position: catIdx,
           })
           .select("id")
-          .single();
+          .single() as { data: { id: string } | null };
 
         if (!category) continue;
 
@@ -120,7 +120,7 @@ export default function OnboardingPage() {
           position: itemIdx,
         }));
 
-        await supabase.from("menu_items").insert(items);
+        await (supabase.from("menu_items") as any).insert(items);
       }
 
       setStep("done");

@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { MenuClient } from "./menu-client";
+import type { Restaurant, Category, MenuItem } from "@/types/database";
 
 export default async function MenuPage({
   params,
@@ -14,7 +15,7 @@ export default async function MenuPage({
     .from("restaurants")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .single() as { data: Restaurant | null };
 
   if (!restaurant) notFound();
 
@@ -22,14 +23,14 @@ export default async function MenuPage({
     .from("categories")
     .select("*")
     .eq("restaurant_id", restaurant.id)
-    .order("position");
+    .order("position") as { data: Category[] | null };
 
   const { data: menuItems } = await supabase
     .from("menu_items")
     .select("*")
     .eq("restaurant_id", restaurant.id)
     .eq("available", true)
-    .order("position");
+    .order("position") as { data: MenuItem[] | null };
 
   return (
     <MenuClient

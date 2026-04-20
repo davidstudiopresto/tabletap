@@ -1,6 +1,7 @@
+import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { SessionInitClient } from "./session-init";
-import type { Table, Restaurant } from "@/types/database";
+import { SessionInitClient } from "@/components/session-init";
+import type { Table, Restaurant, QrSticker } from "@/types/database";
 
 type TableWithRestaurant = Table & { restaurants: Restaurant | null };
 
@@ -29,6 +30,18 @@ export default async function QREntryPage({
     );
   }
 
+  // Try to find the new sticker assigned to this table and redirect
+  const { data: sticker } = await supabase
+    .from("qr_stickers")
+    .select("public_id")
+    .eq("assigned_table_id", table.id)
+    .single() as { data: Pick<QrSticker, "public_id"> | null };
+
+  if (sticker) {
+    redirect(`/q/${sticker.public_id}`);
+  }
+
+  // Fallback: no sticker yet, use legacy flow
   const restaurant = table.restaurants;
 
   return (

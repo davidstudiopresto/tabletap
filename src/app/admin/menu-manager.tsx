@@ -136,14 +136,14 @@ export function MenuManager({ restaurantId, initialCategories, initialMenuItems 
     const supabase = createClient();
     await Promise.all(
       reordered.map((cat, i) =>
-        supabase.from("categories").update({ position: i }).eq("id", cat.id)
+        (supabase.from("categories") as any).update({ position: i }).eq("id", cat.id)
       )
     );
   };
 
   const handleDeleteCategory = async (id: string) => {
     const supabase = createClient();
-    await supabase.from("categories").delete().eq("id", id);
+    await (supabase.from("categories") as any).delete().eq("id", id);
     setCategories((prev) => prev.filter((c) => c.id !== id));
     setMenuItems((prev) => prev.filter((i) => i.category_id !== id));
     toast.success("Catégorie supprimée");
@@ -151,7 +151,7 @@ export function MenuManager({ restaurantId, initialCategories, initialMenuItems 
 
   const handleDeleteItem = async (id: string) => {
     const supabase = createClient();
-    await supabase.from("menu_items").delete().eq("id", id);
+    await (supabase.from("menu_items") as any).delete().eq("id", id);
     setMenuItems((prev) => prev.filter((i) => i.id !== id));
     toast.success("Plat supprimé");
   };

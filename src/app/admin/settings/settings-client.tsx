@@ -24,8 +24,8 @@ export function SettingsClient({ restaurant, userEmail }: Props) {
     setSavingName(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase
-        .from("restaurants")
+      const { error } = await (supabase
+        .from("restaurants") as any)
         .update({ name: name.trim() })
         .eq("id", restaurant.id);
       if (error) throw error;

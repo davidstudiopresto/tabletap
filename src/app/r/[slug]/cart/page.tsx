@@ -37,8 +37,8 @@ export default function CartPage() {
       const supabase = createClient();
 
       // Create order
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
+      const { data: order, error: orderError } = await (supabase
+        .from("orders") as any)
         .insert({
           session_id: sessionId,
           table_id: tableId,
@@ -47,7 +47,7 @@ export default function CartPage() {
           note: globalNote || null,
         })
         .select("id")
-        .single();
+        .single() as { data: { id: string } | null; error: any };
 
       if (orderError || !order) throw orderError;
 
@@ -62,8 +62,8 @@ export default function CartPage() {
         note: item.note || null,
       }));
 
-      const { error: itemsError } = await supabase
-        .from("order_items")
+      const { error: itemsError } = await (supabase
+        .from("order_items") as any)
         .insert(orderItems);
 
       if (itemsError) throw itemsError;

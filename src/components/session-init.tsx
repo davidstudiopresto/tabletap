@@ -50,14 +50,14 @@ export function SessionInitClient({
 
       if (!sessionId) {
         // Create new session
-        const { data: newSession } = await supabase
-          .from("table_sessions")
+        const { data: newSession } = await (supabase
+          .from("table_sessions") as any)
           .insert({
             table_id: tableId,
             restaurant_id: restaurantId,
           })
           .select("id")
-          .single();
+          .single() as { data: { id: string } | null };
 
         if (newSession) {
           sessionId = newSession.id;

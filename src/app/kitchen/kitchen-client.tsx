@@ -137,7 +137,7 @@ export function KitchenClient({
 
   const markAsDone = async (orderId: string) => {
     const supabase = createClient();
-    await supabase.from("orders").update({ status: "done" as const }).eq("id", orderId);
+    await (supabase.from("orders") as any).update({ status: "done" }).eq("id", orderId);
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
   };
 

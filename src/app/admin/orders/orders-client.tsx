@@ -97,7 +97,7 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
 
   const updateStatus = async (orderId: string, status: "done" | "cancelled") => {
     const supabase = createClient();
-    await supabase.from("orders").update({ status }).eq("id", orderId);
+    await (supabase.from("orders") as any).update({ status }).eq("id", orderId);
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status } : o))
     );
