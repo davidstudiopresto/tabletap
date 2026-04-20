@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { UtensilsCrossed, QrCode, LayoutGrid, LogOut } from "lucide-react";
+import { UtensilsCrossed, QrCode, LayoutGrid, LogOut, ClipboardList } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 }
 
 const navItems = [
+  { href: "/admin/orders", label: "Commandes", icon: ClipboardList },
   { href: "/admin", label: "Menu", icon: UtensilsCrossed },
   { href: "/admin/tables", label: "Tables", icon: QrCode },
   { href: "/admin/onboarding", label: "Import", icon: LayoutGrid },
