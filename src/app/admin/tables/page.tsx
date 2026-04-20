@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { TablesManager } from "./tables-manager";
-import type { Staff, QrSticker, Table } from "@/types/database";
+import type { QrSticker, Table } from "@/types/database";
 
 export default async function AdminTablesPage() {
   const supabase = await createServerSupabaseClient();
@@ -11,11 +11,12 @@ export default async function AdminTablesPage() {
 
   const { data: staff } = await supabase
     .from("staff")
-    .select("restaurant_id")
+    .select("restaurant_id, restaurants(name)")
     .eq("user_id", user!.id)
-    .single() as { data: Pick<Staff, "restaurant_id"> | null };
+    .single() as { data: { restaurant_id: string; restaurants: { name: string } | null } | null };
 
   const restaurantId = staff!.restaurant_id;
+  const restaurantName = staff!.restaurants?.name || "Restaurant";
 
   const { data: tables } = await supabase
     .from("tables")
@@ -38,6 +39,7 @@ export default async function AdminTablesPage() {
   return (
     <TablesManager
       restaurantId={restaurantId}
+      restaurantName={restaurantName}
       initialTables={tablesWithStickers}
     />
   );

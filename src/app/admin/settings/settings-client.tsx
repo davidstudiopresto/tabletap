@@ -40,22 +40,44 @@ export function SettingsClient({ restaurant, userEmail }: Props) {
     }
   };
 
+  const passwordErrors = (): string[] => {
+    const errors: string[] = [];
+    if (newPassword.length > 0 && newPassword.length < 8) errors.push("8 caractères minimum");
+    if (newPassword.length > 0 && !/[A-Z]/.test(newPassword)) errors.push("1 majuscule");
+    if (newPassword.length > 0 && !/[0-9]/.test(newPassword)) errors.push("1 chiffre");
+    return errors;
+  };
+
+  const canSubmitPassword =
+    currentPassword.length > 0 &&
+    newPassword.length >= 8 &&
+    /[A-Z]/.test(newPassword) &&
+    /[0-9]/.test(newPassword) &&
+    newPassword === confirmPassword;
+
   const handleChangePassword = async () => {
-    if (newPassword.length < 6) {
-      toast.error("Le mot de passe doit faire au moins 6 caractères");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
-      return;
-    }
+    if (!canSubmitPassword) return;
     setSavingPassword(true);
     try {
       const supabase = createClient();
+
+      // Verify current password by re-authenticating
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: currentPassword,
+      });
+      if (signInError) {
+        toast.error("Mot de passe actuel incorrect");
+        setSavingPassword(false);
+        return;
+      }
+
+      // Update password
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
       if (error) throw error;
+
       toast.success("Mot de passe mis à jour");
       setCurrentPassword("");
       setNewPassword("");
@@ -66,6 +88,8 @@ export function SettingsClient({ restaurant, userEmail }: Props) {
       setSavingPassword(false);
     }
   };
+
+  const errors = passwordErrors();
 
   return (
     <div className="max-w-md">
@@ -97,22 +121,52 @@ export function SettingsClient({ restaurant, userEmail }: Props) {
         <div className="space-y-3">
           <input
             type="password"
-            placeholder="Nouveau mot de passe"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Mot de passe actuel"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
             className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
           />
-          <input
-            type="password"
-            placeholder="Confirmer le mot de passe"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-          />
+          <div>
+            <input
+              type="password"
+              placeholder="Nouveau mot de passe"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className={`w-full h-12 rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 ${
+                newPassword.length > 0 && errors.length > 0
+                  ? "border-red-300"
+                  : "border-neutral-200"
+              }`}
+            />
+            {newPassword.length > 0 && errors.length > 0 && (
+              <p className="text-xs text-red-500 mt-1">
+                Requis : {errors.join(", ")}
+              </p>
+            )}
+            {newPassword.length >= 8 && errors.length === 0 && (
+              <p className="text-xs text-green-600 mt-1">Mot de passe valide</p>
+            )}
+          </div>
+          <div>
+            <input
+              type="password"
+              placeholder="Confirmer le nouveau mot de passe"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={`w-full h-12 rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 ${
+                confirmPassword.length > 0 && confirmPassword !== newPassword
+                  ? "border-red-300"
+                  : "border-neutral-200"
+              }`}
+            />
+            {confirmPassword.length > 0 && confirmPassword !== newPassword && (
+              <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas</p>
+            )}
+          </div>
         </div>
         <button
           onClick={handleChangePassword}
-          disabled={savingPassword || !newPassword}
+          disabled={savingPassword || !canSubmitPassword}
           className="w-full h-10 rounded-full bg-[#0A0A0A] text-white text-sm font-medium mt-3 disabled:opacity-50"
         >
           {savingPassword ? "Mise à jour..." : "Changer le mot de passe"}
