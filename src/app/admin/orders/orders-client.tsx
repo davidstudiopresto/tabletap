@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Check, X, Clock, CheckCircle2 } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Check, X, Clock, CheckCircle2, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatTime, formatPrice } from "@/lib/format";
 import type { Order, OrderItem } from "@/types/database";
@@ -19,6 +19,8 @@ interface Props {
 export function OrdersClient({ restaurantId, initialOrders }: Props) {
   const [orders, setOrders] = useState<AdminOrder[]>(initialOrders);
   const [filter, setFilter] = useState<"pending" | "done" | "all">("pending");
+  const [realtimeOk, setRealtimeOk] = useState(false);
+  const lastFetchRef = useRef<string>(new Date().toISOString());
 
   const playSound = useCallback(() => {
     try {
@@ -46,6 +48,27 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
     }
   }, []);
 
+  const fetchOrders = useCallback(async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("orders")
+      .select("*, order_items(*), tables(number)")
+      .eq("restaurant_id", restaurantId)
+      .in("status", ["pending", "done"])
+      .order("created_at", { ascending: false }) as { data: AdminOrder[] | null };
+    if (data) {
+      setOrders((prev) => {
+        const newIds = data.map((o) => o.id);
+        const prevIds = prev.map((o) => o.id);
+        const hasNew = newIds.some((id) => !prevIds.includes(id));
+        if (hasNew) playSound();
+        return data;
+      });
+      lastFetchRef.current = new Date().toISOString();
+    }
+  }, [restaurantId, playSound]);
+
+  // Realtime subscription
   useEffect(() => {
     const supabase = createClient();
 
@@ -54,46 +77,54 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "orders",
-          filter: `restaurant_id=eq.${restaurantId}`,
         },
         async (payload) => {
-          const newRecord = payload.new as Record<string, unknown>;
-          const { data: newOrder } = await supabase
-            .from("orders")
-            .select("*, order_items(*), tables(number)")
-            .eq("id", newRecord.id as string)
-            .single() as { data: AdminOrder | null };
+          const record = payload.new as Record<string, unknown>;
+          if (record.restaurant_id !== restaurantId) return;
 
-          if (newOrder) {
-            setOrders((prev) => [newOrder, ...prev]);
-            playSound();
+          if (payload.eventType === "INSERT") {
+            const { data: newOrder } = await supabase
+              .from("orders")
+              .select("*, order_items(*), tables(number)")
+              .eq("id", record.id as string)
+              .single() as { data: AdminOrder | null };
+
+            if (newOrder) {
+              setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
+              playSound();
+            }
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new as AdminOrder;
+            setOrders((prev) =>
+              prev.map((o) => (o.id === updated.id ? { ...o, status: updated.status } : o))
+            );
           }
         }
       )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "orders",
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        (payload) => {
-          const updated = payload.new as AdminOrder;
-          setOrders((prev) =>
-            prev.map((o) => (o.id === updated.id ? { ...o, status: updated.status } : o))
-          );
-        }
-      )
-      .subscribe();
+      .subscribe((status) => {
+        setRealtimeOk(status === "SUBSCRIBED");
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [restaurantId, playSound]);
+
+  // Fallback: poll every 10s if realtime is not connected
+  useEffect(() => {
+    if (realtimeOk) return;
+    const interval = setInterval(fetchOrders, 10000);
+    return () => clearInterval(interval);
+  }, [realtimeOk, fetchOrders]);
+
+  // Also poll every 30s as safety net even with realtime
+  useEffect(() => {
+    const interval = setInterval(fetchOrders, 30000);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
 
   const updateStatus = async (orderId: string, status: "done" | "cancelled") => {
     const supabase = createClient();
@@ -113,7 +144,17 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Commandes</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight">Commandes</h1>
+          <button
+            onClick={fetchOrders}
+            className="p-2 text-neutral-400 hover:text-neutral-600 rounded-lg hover:bg-neutral-100"
+            title="Actualiser"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <span className={`w-2 h-2 rounded-full ${realtimeOk ? "bg-green-500" : "bg-orange-400 animate-pulse"}`} title={realtimeOk ? "Temps réel actif" : "Actualisation auto"} />
+        </div>
         {pendingCount > 0 && (
           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-100 text-orange-700 text-sm font-medium">
             <Clock className="w-3.5 h-3.5" />
@@ -156,7 +197,6 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
                   : "border-neutral-200 opacity-60"
               }`}
             >
-              {/* Header */}
               <div
                 className={`flex items-center justify-between px-4 py-3 ${
                   order.status === "pending"
@@ -182,27 +222,20 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
                 </span>
               </div>
 
-              {/* Items */}
               <div className="px-4 py-3 divide-y divide-neutral-100">
                 {order.order_items.map((item: OrderItem) => (
                   <div key={item.id} className="py-2 flex justify-between">
                     <div className="flex gap-2">
-                      <span className="font-bold shrink-0">
-                        {item.quantity}×
-                      </span>
+                      <span className="font-bold shrink-0">{item.quantity}×</span>
                       <div>
                         <span className="font-medium">
                           {item.number_snapshot && (
-                            <span className="text-neutral-400 mr-1">
-                              {item.number_snapshot}
-                            </span>
+                            <span className="text-neutral-400 mr-1">{item.number_snapshot}</span>
                           )}
                           {item.name_snapshot}
                         </span>
                         {item.note && (
-                          <p className="text-sm italic text-neutral-500 mt-0.5">
-                            {item.note}
-                          </p>
+                          <p className="text-sm italic text-neutral-500 mt-0.5">{item.note}</p>
                         )}
                       </div>
                     </div>
@@ -221,11 +254,8 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
                 </div>
               )}
 
-              {/* Footer */}
               <div className="px-4 pb-4 flex items-center justify-between">
-                <span className="font-bold">
-                  {formatPrice(order.total)}
-                </span>
+                <span className="font-bold">{formatPrice(order.total)}</span>
                 {order.status === "pending" && (
                   <div className="flex gap-2">
                     <button
