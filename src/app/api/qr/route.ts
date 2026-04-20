@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "Missing publicId or token" }, { status: 400 });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin).trim();
 
   // New sticker URL or legacy table URL
   const qrUrl = publicId
