@@ -58,8 +58,9 @@ export function TablesManager({ restaurantId, initialTables }: Props) {
 
       setTables((prev) => [...prev, { ...table, sticker }]);
       toast.success(`Table ${nextNumber} créée avec son QR code`);
-    } catch {
-      toast.error("Erreur lors de la création");
+    } catch (err: any) {
+      console.error("Table creation error:", err);
+      toast.error(err?.message || "Erreur lors de la création");
     } finally {
       setAdding(false);
     }
