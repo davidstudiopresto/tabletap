@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { UtensilsCrossed, QrCode, LogOut, ClipboardList, Settings } from "lucide-react";
+import { UtensilsCrossed, QrCode, LogOut, ClipboardList, Settings, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface Props {

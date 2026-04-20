@@ -14,12 +14,6 @@ export default function Home() {
         >
           Espace restaurant
         </Link>
-        <Link
-          href="/kitchen"
-          className="flex items-center justify-center h-14 rounded-full border border-neutral-200 font-medium text-base"
-        >
-          Écran cuisine
-        </Link>
       </div>
     </div>
   );
