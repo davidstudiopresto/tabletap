@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useState, useRef } from "react";
+import { X, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { Category, MenuItem } from "@/types/database";
@@ -33,9 +33,38 @@ export function MenuItemDialog({
     image_url: item?.image_url || "",
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const update = (field: string, value: string | boolean) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
+
+  const uploadImage = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Fichier non supporté");
+      return;
+    }
+    setUploading(true);
+    try {
+      const supabase = createClient();
+      const ext = file.name.split(".").pop();
+      const fileName = `${restaurantId}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("menu-images")
+        .upload(fileName, file);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage
+        .from("menu-images")
+        .getPublicUrl(fileName);
+      update("image_url", urlData.publicUrl);
+      toast.success("Image uploadée");
+    } catch {
+      toast.error("Erreur lors de l'upload");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.price) return;
@@ -118,14 +147,17 @@ export function MenuItemDialog({
           />
 
           <div className="flex gap-3">
-            <input
-              type="number"
-              placeholder="Prix (€)"
-              step="0.01"
-              value={formData.price}
-              onChange={(e) => update("price", e.target.value)}
-              className="w-28 h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-            />
+            <div className="relative w-28">
+              <input
+                type="number"
+                placeholder="Prix"
+                step="0.01"
+                value={formData.price}
+                onChange={(e) => update("price", e.target.value)}
+                className="w-full h-12 rounded-xl border border-neutral-200 px-4 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-neutral-400 pointer-events-none">€</span>
+            </div>
             <select
               value={formData.category_id}
               onChange={(e) => update("category_id", e.target.value)}
@@ -139,13 +171,59 @@ export function MenuItemDialog({
             </select>
           </div>
 
-          <input
-            type="text"
-            placeholder="URL image (optionnel)"
-            value={formData.image_url}
-            onChange={(e) => update("image_url", e.target.value)}
-            className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-          />
+          {/* Image upload */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const file = e.dataTransfer.files[0];
+              if (file) uploadImage(file);
+            }}
+            onClick={() => fileInputRef.current?.click()}
+            className={`w-full rounded-xl border-2 border-dashed p-4 text-center cursor-pointer transition-colors ${
+              dragOver ? "border-neutral-400 bg-neutral-50" : "border-neutral-200 hover:border-neutral-300"
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadImage(file);
+              }}
+            />
+            {formData.image_url ? (
+              <div className="relative">
+                <img
+                  src={formData.image_url}
+                  alt="Aperçu"
+                  className="w-full h-32 object-cover rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); update("image_url", ""); }}
+                  className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center"
+                >
+                  <X className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
+            ) : (
+              <div className="py-2">
+                {uploading ? (
+                  <p className="text-sm text-neutral-400">Upload en cours...</p>
+                ) : (
+                  <>
+                    <Upload className="w-6 h-6 mx-auto mb-1.5 text-neutral-300" />
+                    <p className="text-sm text-neutral-400">Glissez une image ou cliquez</p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           <label className="flex items-center gap-3 cursor-pointer">
             <input
