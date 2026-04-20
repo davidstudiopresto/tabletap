@@ -28,8 +28,16 @@ export function TablesManager({ restaurantId, initialTables }: Props) {
     setAdding(true);
     try {
       const supabase = createClient();
-      const nextNumber =
-        tables.length > 0 ? Math.max(...tables.map((t) => t.number)) + 1 : 1;
+
+      // Get max table number from DB to avoid conflicts
+      const { data: allTables } = await supabase
+        .from("tables")
+        .select("number")
+        .eq("restaurant_id", restaurantId)
+        .order("number", { ascending: false })
+        .limit(1) as { data: { number: number }[] | null };
+
+      const nextNumber = allTables && allTables.length > 0 ? allTables[0].number + 1 : 1;
 
       // 1. Create table
       const { data: table, error: tableError } = await (supabase
