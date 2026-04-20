@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { Restaurant } from "@/types/database";
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function SettingsClient({ restaurant, userEmail }: Props) {
+  const router = useRouter();
   const [name, setName] = useState(restaurant.name);
   const [savingName, setSavingName] = useState(false);
 
@@ -30,6 +32,7 @@ export function SettingsClient({ restaurant, userEmail }: Props) {
         .eq("id", restaurant.id);
       if (error) throw error;
       toast.success("Nom mis à jour");
+      router.refresh();
     } catch {
       toast.error("Erreur lors de la sauvegarde");
     } finally {
