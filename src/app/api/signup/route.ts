@@ -69,6 +69,39 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Erreur lors de la configuration" }, { status: 500 });
     }
 
+    // 4. Create demo menu
+    const rid = restaurant.id;
+    const demoCategories = [
+      { name: "Entrées", position: 0 },
+      { name: "Plats", position: 1 },
+      { name: "Desserts", position: 2 },
+      { name: "Boissons", position: 3 },
+    ];
+
+    for (const cat of demoCategories) {
+      const { data: category } = await supabase
+        .from("categories")
+        .insert({ restaurant_id: rid, name: cat.name, position: cat.position })
+        .select("id")
+        .single();
+
+      if (!category) continue;
+
+      const items = [
+        { name: `${cat.name.slice(0, -1)} 1`, price: 10, position: 0 },
+        { name: `${cat.name.slice(0, -1)} 2`, price: 10, position: 1 },
+        { name: `${cat.name.slice(0, -1)} 3`, price: 10, position: 2 },
+      ].map((item) => ({
+        restaurant_id: rid,
+        category_id: category.id,
+        name: item.name,
+        price: item.price,
+        position: item.position,
+      }));
+
+      await supabase.from("menu_items").insert(items);
+    }
+
     return Response.json({ success: true });
   } catch {
     return Response.json({ error: "Erreur serveur" }, { status: 500 });
