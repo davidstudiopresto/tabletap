@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 import { useCartStore } from "@/stores/cart";
 import { formatPrice } from "@/lib/format";
 import { ItemDetailSheet } from "./item-detail-sheet";
@@ -24,7 +24,14 @@ export function MenuClient({ restaurant, categories, menuItems }: Props) {
   const pillRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const navRef = useRef<HTMLDivElement>(null);
   const addItem = useCartStore((s) => s.addItem);
+  const cartItems = useCartStore((s) => s.items);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
   const tableNumber = useCartStore((s) => s.tableNumber);
+
+  const getItemQty = (itemId: string) => {
+    const found = cartItems.find((c) => c.menuItem.id === itemId);
+    return found?.quantity || 0;
+  };
 
   const itemsByCategory = categories.map((cat) => ({
     category: cat,
@@ -152,28 +159,50 @@ export function MenuClient({ restaurant, categories, menuItems }: Props) {
                       {formatPrice(item.price)}
                     </p>
                   </div>
-                  {item.image_url ? (
-                    <div className="relative w-[88px] h-[88px] shrink-0 rounded-xl overflow-hidden bg-neutral-100">
-                      <img
-                        src={item.image_url}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
+                  <div className="flex items-center gap-2 shrink-0 self-center">
+                    {item.image_url && (
+                      <div className="w-[72px] h-[72px] rounded-xl overflow-hidden bg-neutral-100 mr-1">
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    {getItemQty(item.id) > 0 ? (
+                      <div className="flex items-center gap-0" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const qty = getItemQty(item.id);
+                            updateQuantity(item.id, qty - 1);
+                          }}
+                          className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="w-8 text-center text-sm font-bold">
+                          {getItemQty(item.id)}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addItem(item);
+                          }}
+                          className="w-8 h-8 rounded-full bg-[#0A0A0A] flex items-center justify-center text-white"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         onClick={(e) => handleQuickAdd(e, item)}
-                        className="absolute top-2 right-2 rounded-full bg-black/90 w-8 h-8 flex items-center justify-center text-white"
+                        className="w-8 h-8 rounded-full bg-[#0A0A0A] flex items-center justify-center text-white"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={(e) => handleQuickAdd(e, item)}
-                      className="shrink-0 rounded-full bg-[#0A0A0A] w-8 h-8 flex items-center justify-center text-white self-center"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
