@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Check, X, Clock, CheckCircle2, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatTime, formatPrice } from "@/lib/format";
@@ -19,8 +19,7 @@ interface Props {
 export function OrdersClient({ restaurantId, initialOrders }: Props) {
   const [orders, setOrders] = useState<AdminOrder[]>(initialOrders);
   const [filter, setFilter] = useState<"pending" | "done" | "all">("pending");
-  const [realtimeOk, setRealtimeOk] = useState(false);
-  const lastFetchRef = useRef<string>(new Date().toISOString());
+  const [spinning, setSpinning] = useState(false);
 
   const playSound = useCallback(() => {
     try {
@@ -58,29 +57,34 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
       .order("created_at", { ascending: false }) as { data: AdminOrder[] | null };
     if (data) {
       setOrders((prev) => {
-        const newIds = data.map((o) => o.id);
         const prevIds = prev.map((o) => o.id);
-        const hasNew = newIds.some((id) => !prevIds.includes(id));
-        if (hasNew) playSound();
+        const hasNew = data.some((o) => !prevIds.includes(o.id));
+        if (hasNew && prev.length > 0) playSound();
         return data;
       });
-      lastFetchRef.current = new Date().toISOString();
     }
   }, [restaurantId, playSound]);
 
-  // Realtime subscription
+  const handleRefresh = async () => {
+    setSpinning(true);
+    await fetchOrders();
+    setTimeout(() => setSpinning(false), 600);
+  };
+
+  // Auto-refresh every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchOrders, 10000);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
+
+  // Also try realtime
   useEffect(() => {
     const supabase = createClient();
-
     const channel = supabase
       .channel("admin-orders")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-        },
+        { event: "*", schema: "public", table: "orders" },
         async (payload) => {
           const record = payload.new as Record<string, unknown>;
           if (record.restaurant_id !== restaurantId) return;
@@ -91,7 +95,6 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
               .select("*, order_items(*), tables(number)")
               .eq("id", record.id as string)
               .single() as { data: AdminOrder | null };
-
             if (newOrder) {
               setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
               playSound();
@@ -104,27 +107,12 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
           }
         }
       )
-      .subscribe((status) => {
-        setRealtimeOk(status === "SUBSCRIBED");
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [restaurantId, playSound]);
-
-  // Fallback: poll every 10s if realtime is not connected
-  useEffect(() => {
-    if (realtimeOk) return;
-    const interval = setInterval(fetchOrders, 10000);
-    return () => clearInterval(interval);
-  }, [realtimeOk, fetchOrders]);
-
-  // Also poll every 30s as safety net even with realtime
-  useEffect(() => {
-    const interval = setInterval(fetchOrders, 30000);
-    return () => clearInterval(interval);
-  }, [fetchOrders]);
 
   const updateStatus = async (orderId: string, status: "done" | "cancelled") => {
     const supabase = createClient();
@@ -147,13 +135,12 @@ export function OrdersClient({ restaurantId, initialOrders }: Props) {
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold tracking-tight">Commandes</h1>
           <button
-            onClick={fetchOrders}
+            onClick={handleRefresh}
             className="p-2 text-neutral-400 hover:text-neutral-600 rounded-lg hover:bg-neutral-100"
             title="Actualiser"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${spinning ? "animate-spin" : ""}`} />
           </button>
-          <span className={`w-2 h-2 rounded-full ${realtimeOk ? "bg-green-500" : "bg-orange-400 animate-pulse"}`} title={realtimeOk ? "Temps réel actif" : "Actualisation auto"} />
         </div>
         {pendingCount > 0 && (
           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-100 text-orange-700 text-sm font-medium">
