@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6">
-      <h1 className="text-4xl font-bold tracking-tight mb-2">TableTap</h1>
+      <h1 className="text-4xl font-bold tracking-tight mb-2">PrestoQR</h1>
       <p className="text-neutral-500 text-lg mb-8">
         Commandez depuis votre table
       </p>

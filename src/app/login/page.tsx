@@ -14,6 +14,16 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+
+  const switchMode = (newMode: "login" | "signup") => {
+    if (newMode === mode) return;
+    setTransitioning(true);
+    setTimeout(() => {
+      setMode(newMode);
+      setTransitioning(false);
+    }, 150);
+  };
 
   const passwordErrors = (): string[] => {
     if (mode === "login" || password.length === 0) return [];
@@ -35,26 +45,13 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { toast.error("Email ou mot de passe incorrect"); return; }
 
-      if (error) {
-        toast.error("Email ou mot de passe incorrect");
-        return;
-      }
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Erreur d'authentification");
-        return;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Erreur d'authentification"); return; }
 
       const { data: staff } = await supabase
         .from("staff")
@@ -62,11 +59,7 @@ export default function LoginPage() {
         .eq("user_id", user.id)
         .single() as { data: Pick<Staff, "role"> | null };
 
-      if (!staff) {
-        toast.error("Aucun restaurant associé à ce compte");
-        return;
-      }
-
+      if (!staff) { toast.error("Aucun restaurant associé à ce compte"); return; }
       router.push("/admin");
     } catch {
       toast.error("Erreur de connexion");
@@ -79,29 +72,18 @@ export default function LoginPage() {
     e.preventDefault();
     if (!canSubmitSignup) return;
     setLoading(true);
-
     try {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, restaurantName: restaurantName.trim() }),
       });
-
       const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "Erreur lors de l'inscription"); return; }
 
-      if (!res.ok) {
-        toast.error(data.error || "Erreur lors de l'inscription");
-        return;
-      }
-
-      // Sign in with the new account
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast.error("Compte créé, veuillez vous connecter");
-        setMode("login");
-        return;
-      }
+      if (error) { toast.error("Compte créé, veuillez vous connecter"); switchMode("login"); return; }
 
       toast.success("Bienvenue !");
       router.push("/admin");
@@ -113,10 +95,11 @@ export default function LoginPage() {
   };
 
   const errors = passwordErrors();
+  const inputClass = "w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300";
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-6">
-      <h1 className="text-2xl font-bold tracking-tight mb-1">TableTap</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen px-6 relative">
+      <h1 className="text-2xl font-bold tracking-tight mb-1">PrestoQR</h1>
       <p className="text-neutral-500 mb-6">
         {mode === "login" ? "Connexion espace restaurant" : "Créer votre espace restaurant"}
       </p>
@@ -125,8 +108,8 @@ export default function LoginPage() {
       <div className="flex w-full max-w-sm mb-6 bg-neutral-100 rounded-full p-1">
         <button
           type="button"
-          onClick={() => setMode("login")}
-          className={`flex-1 py-2 text-sm font-medium rounded-full transition-colors ${
+          onClick={() => switchMode("login")}
+          className={`flex-1 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
             mode === "login" ? "bg-white text-[#0A0A0A] shadow-sm" : "text-neutral-500"
           }`}
         >
@@ -134,8 +117,8 @@ export default function LoginPage() {
         </button>
         <button
           type="button"
-          onClick={() => setMode("signup")}
-          className={`flex-1 py-2 text-sm font-medium rounded-full transition-colors ${
+          onClick={() => switchMode("signup")}
+          className={`flex-1 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
             mode === "signup" ? "bg-white text-[#0A0A0A] shadow-sm" : "text-neutral-500"
           }`}
         >
@@ -143,56 +126,20 @@ export default function LoginPage() {
         </button>
       </div>
 
-      <div className="w-full max-w-sm overflow-hidden">
-        <div
-          className="flex transition-transform duration-300 ease-in-out"
-          style={{ transform: mode === "login" ? "translateX(0)" : "translateX(-50%)" }}
-        >
-          {/* Login form */}
-          <form onSubmit={handleLogin} className="w-full shrink-0 space-y-4 px-1">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-            />
-            <input
-              type="password"
-              placeholder="Mot de passe"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-14 rounded-full bg-[#0A0A0A] text-white font-medium text-base disabled:opacity-50"
-            >
+      {/* Forms with fade transition */}
+      <div className={`w-full max-w-sm transition-opacity duration-150 ${transitioning ? "opacity-0" : "opacity-100"}`}>
+        {mode === "login" ? (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
+            <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} />
+            <button type="submit" disabled={loading} className="w-full h-14 rounded-full bg-[#0A0A0A] text-white font-medium text-base disabled:opacity-50">
               {loading ? "Connexion..." : "Se connecter"}
             </button>
           </form>
-
-          {/* Signup form */}
-          <form onSubmit={handleSignup} className="w-full shrink-0 space-y-4 px-1">
-            <input
-              type="text"
-              placeholder="Nom du restaurant"
-              value={restaurantName}
-              onChange={(e) => setRestaurantName(e.target.value)}
-              required
-              className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-            />
+        ) : (
+          <form onSubmit={handleSignup} className="space-y-4">
+            <input type="text" placeholder="Nom du restaurant" value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)} required className={inputClass} />
+            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
             <div>
               <input
                 type="password"
@@ -200,9 +147,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className={`w-full h-12 rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 ${
-                  password.length > 0 && errors.length > 0 ? "border-red-300" : "border-neutral-200"
-                }`}
+                className={`${inputClass} ${password.length > 0 && errors.length > 0 ? "!border-red-300" : ""}`}
               />
               {password.length > 0 && errors.length > 0 && (
                 <p className="text-xs text-red-500 mt-1">Requis : {errors.join(", ")}</p>
@@ -215,23 +160,17 @@ export default function LoginPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className={`w-full h-12 rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 ${
-                  confirmPassword.length > 0 && confirmPassword !== password ? "border-red-300" : "border-neutral-200"
-                }`}
+                className={`${inputClass} ${confirmPassword.length > 0 && confirmPassword !== password ? "!border-red-300" : ""}`}
               />
               {confirmPassword.length > 0 && confirmPassword !== password && (
                 <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas</p>
               )}
             </div>
-            <button
-              type="submit"
-              disabled={loading || !canSubmitSignup}
-              className="w-full h-14 rounded-full bg-[#0A0A0A] text-white font-medium text-base disabled:opacity-50"
-            >
+            <button type="submit" disabled={loading || !canSubmitSignup} className="w-full h-14 rounded-full bg-[#0A0A0A] text-white font-medium text-base disabled:opacity-50">
               {loading ? "Création..." : "Créer mon restaurant"}
             </button>
           </form>
-        </div>
+        )}
       </div>
 
       {/* Powered by Presto */}

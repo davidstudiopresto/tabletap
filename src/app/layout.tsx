@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "TableTap",
+  title: "PrestoQR",
   description: "Commandez depuis votre table",
 };
 
