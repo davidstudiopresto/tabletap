@@ -173,11 +173,6 @@ export default function LoginPage() {
         )}
       </div>
 
-      {/* Powered by Presto */}
-      <div className="absolute bottom-6 flex items-baseline gap-1">
-        <span className="text-sm text-neutral-400">Propulsé par</span>
-        <img src="/presto-logo.png" alt="Presto" className="h-4 relative top-[1px]" />
-      </div>
     </div>
   );
 }
