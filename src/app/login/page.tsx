@@ -143,89 +143,102 @@ export default function LoginPage() {
         </button>
       </div>
 
-      {mode === "login" ? (
-        <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-          />
-          <input
-            type="password"
-            placeholder="Mot de passe"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-14 rounded-full bg-[#0A0A0A] text-white font-medium text-base disabled:opacity-50"
-          >
-            {loading ? "Connexion..." : "Se connecter"}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleSignup} className="w-full max-w-sm space-y-4">
-          <input
-            type="text"
-            placeholder="Nom du restaurant"
-            value={restaurantName}
-            onChange={(e) => setRestaurantName(e.target.value)}
-            required
-            className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
-          />
-          <div>
+      <div className="w-full max-w-sm overflow-hidden">
+        <div
+          className="flex transition-transform duration-300 ease-in-out"
+          style={{ transform: mode === "login" ? "translateX(0)" : "translateX(-50%)" }}
+        >
+          {/* Login form */}
+          <form onSubmit={handleLogin} className="w-full shrink-0 space-y-4 px-1">
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
+            />
             <input
               type="password"
               placeholder="Mot de passe"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className={`w-full h-12 rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 ${
-                password.length > 0 && errors.length > 0 ? "border-red-300" : "border-neutral-200"
-              }`}
+              className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
             />
-            {password.length > 0 && errors.length > 0 && (
-              <p className="text-xs text-red-500 mt-1">Requis : {errors.join(", ")}</p>
-            )}
-          </div>
-          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-14 rounded-full bg-[#0A0A0A] text-white font-medium text-base disabled:opacity-50"
+            >
+              {loading ? "Connexion..." : "Se connecter"}
+            </button>
+          </form>
+
+          {/* Signup form */}
+          <form onSubmit={handleSignup} className="w-full shrink-0 space-y-4 px-1">
             <input
-              type="password"
-              placeholder="Confirmer le mot de passe"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              type="text"
+              placeholder="Nom du restaurant"
+              value={restaurantName}
+              onChange={(e) => setRestaurantName(e.target.value)}
               required
-              className={`w-full h-12 rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 ${
-                confirmPassword.length > 0 && confirmPassword !== password ? "border-red-300" : "border-neutral-200"
-              }`}
+              className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
             />
-            {confirmPassword.length > 0 && confirmPassword !== password && (
-              <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas</p>
-            )}
-          </div>
-          <button
-            type="submit"
-            disabled={loading || !canSubmitSignup}
-            className="w-full h-14 rounded-full bg-[#0A0A0A] text-white font-medium text-base disabled:opacity-50"
-          >
-            {loading ? "Création..." : "Créer mon restaurant"}
-          </button>
-        </form>
-      )}
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full h-12 rounded-xl border border-neutral-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300"
+            />
+            <div>
+              <input
+                type="password"
+                placeholder="Mot de passe"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className={`w-full h-12 rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 ${
+                  password.length > 0 && errors.length > 0 ? "border-red-300" : "border-neutral-200"
+                }`}
+              />
+              {password.length > 0 && errors.length > 0 && (
+                <p className="text-xs text-red-500 mt-1">Requis : {errors.join(", ")}</p>
+              )}
+            </div>
+            <div>
+              <input
+                type="password"
+                placeholder="Confirmer le mot de passe"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className={`w-full h-12 rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 ${
+                  confirmPassword.length > 0 && confirmPassword !== password ? "border-red-300" : "border-neutral-200"
+                }`}
+              />
+              {confirmPassword.length > 0 && confirmPassword !== password && (
+                <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas</p>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !canSubmitSignup}
+              className="w-full h-14 rounded-full bg-[#0A0A0A] text-white font-medium text-base disabled:opacity-50"
+            >
+              {loading ? "Création..." : "Créer mon restaurant"}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Powered by Presto */}
+      <div className="absolute bottom-6 flex items-center gap-2">
+        <span className="text-xs text-neutral-400">Propulsé par</span>
+        <img src="/presto-logo.png" alt="Presto" className="h-5" />
+      </div>
     </div>
   );
 }
